@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PasswordLab — Free Password Strength Checker & Crack Time Estimator</title>
+<meta name="description" content="How long would your password take to crack? PasswordLab estimates password strength instantly: entropy in bits, character-set analysis and an honest offline-attack crack-time estimate. 100% in-browser, nothing leaves your device.">
+<meta name="keywords" content="password strength checker, password crack time estimator, how long to crack password, password entropy calculator, password security">
+<meta property="og:title" content="PasswordLab — Free Password Strength Checker">
+<meta property="og:description" content="Enter a password, get an honest crack-time estimate. Entropy, character-set breakdown, zero tracking — everything runs in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/">
+<link rel="canonical" href="https://password.mimito6.uk/">
+<link rel="stylesheet" href="styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab",
+  "url": "https://password.mimito6.uk/",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Free password strength checker that estimates crack time with an offline-attack model. Runs entirely in the browser; no password ever leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "How does PasswordLab estimate crack time?",
+     "acceptedAnswer": {"@type": "Answer", "text": "We compute entropy as password length times log2 of the character-set size (26 lowercase + 26 uppercase + 10 digits + about 32 symbols, counted only for classes your password actually uses). Crack time is 2^entropy divided by 10 billion guesses per second — the rate of a realistic offline brute-force attack against a stolen password hash. Common passwords, keyboard walks and repeated patterns are penalized with explicit, documented rules."}},
+    {"@type": "Question", "name": "Is it safe to type my real password here?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Yes. PasswordLab has no backend and makes no network requests. Every calculation runs in JavaScript inside your browser, and your password never leaves your device. The share button only copies the result statistics, never the password itself."}},
+    {"@type": "Question", "name": "What does 'bits of entropy' mean?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Entropy in bits measures how many guesses an attacker would need on average. Each extra bit doubles the search space: 40 bits is about a trillion guesses, 60 bits about a quintillion. A random 12-character password using all four character classes has about 79 bits."}},
+    {"@type": "Question", "name": "Why is my long password rated weak?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Length alone is not enough. If your password appears in public leaked-password lists, attackers try it in the first seconds of a dictionary attack — it is effectively cracked instantly regardless of length. Keyboard walks like 'qwerty' and repeated patterns like 'abcabc' also shrink the real search space far below the naive brute-force math."}},
+    {"@type": "Question", "name": "What makes a strong password?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Length plus unpredictability: 12 or more characters drawn from several character classes, or better, a random passphrase of 4-6 words. Avoid anything published, quoted, or patterned. A password manager generating random passwords is the most reliable approach."}},
+    {"@type": "Question", "name": "Is this estimate a guarantee?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. It is an estimate based on a fixed model: an offline attack at 10 billion guesses per second with no dictionary head start beyond the documented penalties. Real attackers use smarter, targeted methods, so treat the number as an optimistic upper bound, not a promise."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Password Strength Checker — Honest Crack-Time Estimate</h1>
+
+  <section class="tool" aria-label="Password strength checker">
+    <label class="pw-label" for="pw">Type a password to test</label>
+    <div class="pw-row">
+      <input type="password" id="pw" autocomplete="off" spellcheck="false"
+             placeholder="Enter a password…" aria-describedby="privacy-note">
+      <button id="toggle" type="button" aria-label="Show password" aria-pressed="false">Show</button>
+    </div>
+    <p class="privacy" id="privacy-note">🔒 100% computed in your browser. Your password never leaves this device — there is no server, no analytics, no network requests.</p>
+
+    <div class="result" id="result" hidden>
+      <div class="verdict" id="verdict">–</div>
+      <div class="bignum" id="bignum">–</div>
+      <div class="bignum-sub">estimated time to crack</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">Entropy</span><span class="stat-v" id="entropy">–</span></div>
+        <div class="stat"><span class="stat-k">Length</span><span class="stat-v" id="length">–</span></div>
+        <div class="stat"><span class="stat-k">Combinations</span><span class="stat-v" id="combos">–</span></div>
+      </div>
+      <div class="charset" id="charset" aria-label="Character set analysis"></div>
+      <div class="warnings" id="warnings"></div>
+      <button id="copy" type="button" class="copy-btn">📋 Copy result to share</button>
+      <p class="copy-hint" id="copyHint" hidden>Copied — the text contains only statistics, never your password.</p>
+    </div>
+
+    <p class="model-note"><strong>Estimate</strong> — based on offline attack at 10 billion guesses/sec.</p>
+    <p class="leak-note">⚠️ A password that has already been leaked is useless, no matter how long it is.</p>
+  </section>
+
+  <section class="method" aria-label="How the estimate works">
+    <h2>How this estimate works</h2>
+    <p>Entropy = password length × log₂(character-set size). The set is built from the character
+    classes your password actually uses: lowercase (26), uppercase (26), digits (10), symbols (~32).
+    Crack time = 2<sup>entropy</sup> ÷ 10,000,000,000 guesses per second — the speed of a realistic
+    offline brute-force attack against a stolen password hash.</p>
+    <h3>Penalty rules (applied before the estimate)</h3>
+    <ol>
+      <li><strong>Common password.</strong> If it matches a built-in list of widely-used passwords
+      (e.g. <code>password123</code>, <code>qwerty</code>, <code>123456</code>), it is reported as
+      <em>crackable instantly</em> — attackers try these in the first seconds of every dictionary attack.</li>
+      <li><strong>Keyboard walk.</strong> A run of 4+ characters along a standard QWERTY row
+      (forward or reverse, e.g. <code>qwer</code>) counts as 20 bits — one of roughly a million known
+      patterns — instead of its raw brute-force value.</li>
+      <li><strong>Repeated pattern.</strong> The password is reduced to its smallest repeating unit
+      (<code>abcabc</code> → <code>abc</code> ×2); entropy is computed on the unit. A single repeated
+      character is the extreme case of this rule.</li>
+    </ol>
+    <p class="honest">These penalties are heuristics, shown explicitly so you can judge them. Real attackers
+    are smarter than any formula — treat the number as an optimistic upper bound.</p>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>How does PasswordLab estimate crack time?</summary>
+      <p>We compute entropy as password length × log₂(character-set size), counting only the character
+      classes your password actually uses (lowercase 26, uppercase 26, digits 10, symbols ~32). Crack time
+      is 2^entropy ÷ 10 billion guesses/sec — a realistic offline brute-force rate. Common passwords,
+      keyboard walks and repeated patterns get explicit penalties.</p>
+    </details>
+    <details>
+      <summary>Is it safe to type my real password here?</summary>
+      <p>Yes. PasswordLab has no backend and makes zero network requests. Everything runs in JavaScript
+      in your browser, and the share button copies only statistics — never the password itself.</p>
+    </details>
+    <details>
+      <summary>What does "bits of entropy" mean?</summary>
+      <p>Bits of entropy measure the size of the search space: each bit doubles the guesses needed.
+      40 bits ≈ a trillion guesses, 60 bits ≈ a quintillion. A random 12-character password using all
+      four character classes has about 79 bits.</p>
+    </details>
+    <details>
+      <summary>Why is my long password rated weak?</summary>
+      <p>Length alone is not enough. If a password appears in public leaked-password lists, attackers try
+      it within seconds — it is effectively cracked instantly no matter how long it is. Keyboard walks
+      and repeated patterns shrink the real search space far below the naive math too.</p>
+    </details>
+    <details>
+      <summary>What makes a strong password?</summary>
+      <p>Length plus unpredictability: 12+ characters from several classes, or a random 4–6 word
+      passphrase. Avoid anything published, quoted, or patterned. A password manager that generates
+      random passwords is the most reliable approach.</p>
+    </details>
+    <details>
+      <summary>Is this estimate a guarantee?</summary>
+      <p>No — it is an estimate from a fixed model (offline attack, 10 billion guesses/sec, documented
+      penalties only). Real attackers use smarter targeted methods, so treat it as an optimistic upper
+      bound, not a promise.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>PasswordLab — free password strength checker. Estimates only; no password is ever transmitted anywhere.</p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
