@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Passphrase Generator — Random Diceware-Style Passphrases | PasswordLab</title>
+<meta name="description" content="Generate a truly random, memorable passphrase from the EFF diceware word list (1296 words) with an honest entropy and crack-time estimate. 100% in-browser, cryptographically random, nothing leaves your device.">
+<meta name="keywords" content="passphrase generator, diceware generator, random passphrase, memorable password generator, xkcd password">
+<meta property="og:title" content="Passphrase Generator — Random, Memorable, Strong">
+<meta property="og:description" content="Truly random passphrases from the EFF diceware word list, with an honest entropy estimate. Runs entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/passphrase-generator">
+<link rel="canonical" href="https://password.mimito6.uk/passphrase-generator">
+<link rel="stylesheet" href="../styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab Passphrase Generator",
+  "url": "https://password.mimito6.uk/passphrase-generator",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Generates cryptographically random diceware-style passphrases from the EFF short word list, with an honest entropy and crack-time estimate. Runs entirely in the browser; nothing ever leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Why are random passphrases strong?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Each word is a uniform random pick from a list of 1296 words, so every word adds log2(1296) ≈ 10.3 bits of entropy. A 5-word passphrase has about 51.7 bits — roughly 3.7 quadrillion combinations. The strength comes from the randomness of the picks, which a computer does far better than a human."}},
+    {"@type": "Question", "name": "Why does the crack-time estimate look so short?",
+     "acceptedAnswer": {"@type": "Answer", "text": "The estimate assumes the attacker already knows exactly how you generated the passphrase (the word list, the word count, the options) and brute-forces that known space offline at 10 billion guesses per second. That is the worst case under Kerckhoffs's principle. Real attackers usually start with common-password dictionaries and do not know your method, so your real-world resistance is typically much higher — but we report the pessimistic number so you can judge for yourself."}},
+    {"@type": "Question", "name": "How many words should I use?",
+     "acceptedAnswer": {"@type": "Answer", "text": "5 words (≈51.7 bits, ~4 days of worst-case offline brute force) is fine for everyday accounts. Use 6 or more (≈62+ bits, ~15+ years) for high-value accounts such as email or your password manager. 3 words is weak against a determined offline attack — avoid it for anything important."}},
+    {"@type": "Question", "name": "What does 'capitalize one random word' change?",
+     "acceptedAnswer": {"@type": "Answer", "text": "It adds log2(word count) bits of entropy — about 2.3 bits for 5 words — because an attacker who knows the method must also guess which of the words was capitalized. Small but real, and it helps satisfy 'must contain uppercase' password rules."}},
+    {"@type": "Question", "name": "Is this estimate a guarantee?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. It is an estimate from a fixed, documented model: an attacker who knows the generation method, brute-forcing offline at 10 billion guesses per second. Real attackers may be weaker (they don't know your method) or stronger (targeted phishing, malware). Treat the number as a transparent benchmark, not a promise."}},
+    {"@type": "Question", "name": "Does this site see my passphrase?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. There is no backend and no network requests. Words are drawn with the browser's cryptographic random number generator (crypto.getRandomValues) and everything happens inside this page. Refreshing the page destroys the passphrase."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/">Strength Checker</a>
+      <a href="/passphrase-generator" aria-current="page">Passphrase Generator</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Random Passphrase Generator</h1>
+
+  <section class="tool" aria-label="Passphrase generator">
+    <div class="opt-row">
+      <label for="wordCount" class="pw-label">Words: <span id="countLabel">5</span></label>
+      <input type="range" id="wordCount" min="3" max="10" value="5" step="1" aria-label="Number of words">
+    </div>
+    <div class="opt-row">
+      <span class="pw-label">Separator</span>
+      <div class="radio-group">
+        <label><input type="radio" name="sep" value=" " checked> space</label>
+        <label><input type="radio" name="sep" value="-"> hyphen</label>
+        <label><input type="radio" name="sep" value=""> none</label>
+      </div>
+    </div>
+    <div class="opt-row">
+      <label class="check-label"><input type="checkbox" id="capCheck"> Capitalize one random word <span class="opt-note">(+log₂ words bits)</span></label>
+    </div>
+    <button id="genBtn" type="button" class="copy-btn">🎲 Generate passphrase</button>
+
+    <p class="privacy">🔒 Drawn with <code>crypto.getRandomValues</code>, 100% in your browser. Nothing is sent anywhere — refresh the page and the passphrase is gone.</p>
+
+    <div class="result" id="result" hidden>
+      <div class="verdict" id="verdict">–</div>
+      <div class="phrase-box" id="output" aria-live="polite">–</div>
+      <div class="bignum" id="bignum">–</div>
+      <div class="bignum-sub">estimated time to crack</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">Entropy</span><span class="stat-v" id="entropy">–</span></div>
+        <div class="stat"><span class="stat-k">Combinations</span><span class="stat-v" id="combos">–</span></div>
+      </div>
+      <button id="copyBtn" type="button" class="copy-btn">📋 Copy passphrase</button>
+      <p class="copy-hint" id="copyHint" hidden>Copied to clipboard.</p>
+    </div>
+
+    <p class="model-note"><strong>Estimate</strong> — <span id="modelNote">attacker knows the method; offline attack at 10 billion guesses/sec.</span></p>
+  </section>
+
+  <section class="method" aria-label="How the estimate works">
+    <h2>How this estimate works</h2>
+    <p>Entropy = number of words × log₂(1296) ≈ words × 10.34 bits, because each word is a uniform
+    random pick from the <a href="https://www.eff.org/dice">EFF Short Word List 2.0</a> (1296 words).
+    Capitalizing one random word adds log₂(word count) bits — the attacker must also guess
+    <em>which</em> word was capitalized. Crack time = 2<sup>entropy</sup> ÷ 10,000,000,000 guesses
+    per second.</p>
+    <p class="honest">We assume the attacker knows the method (Kerckhoffs's principle) — the worst case.
+    Most real attackers don't know your method, so your actual resistance is usually higher. We show
+    the pessimistic number on purpose; judge it with eyes open.</p>
+    <h3>Quick reference</h3>
+    <ul>
+      <li><strong>3 words</strong> — ≈31 bits. Weak against offline attacks; avoid for important accounts.</li>
+      <li><strong>5 words</strong> — ≈51.7 bits. Fine for everyday accounts.</li>
+      <li><strong>6+ words</strong> — ≈62+ bits. For high-value accounts (email, password manager).</li>
+    </ul>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>Why are random passphrases strong?</summary>
+      <p>Each word is a uniform random pick from 1296 words, so every word adds ≈10.3 bits of entropy:
+      a 5-word passphrase has about 51.7 bits — roughly 3.7 quadrillion combinations. The strength comes
+      from the randomness of the picks, which a computer does far better than a human. Don't invent
+      words yourself — human "randomness" is predictable.</p>
+    </details>
+    <details>
+      <summary>Why does the crack-time estimate look so short?</summary>
+      <p>It assumes the attacker already knows exactly how you generated the passphrase and brute-forces
+      that known space offline at 10 billion guesses per second — the worst case. Real attackers usually
+      start with common-password dictionaries and don't know your method, so real-world resistance is
+      typically much higher. We report the pessimistic number so you can judge for yourself.</p>
+    </details>
+    <details>
+      <summary>How many words should I use?</summary>
+      <p>5 words (≈51.7 bits) is fine for everyday accounts. Use 6 or more (≈62+ bits, ~15+ years of
+      worst-case offline brute force) for high-value accounts like email or your password manager.
+      3 words is weak against a determined offline attack.</p>
+    </details>
+    <details>
+      <summary>What does "capitalize one random word" change?</summary>
+      <p>It adds log₂(word count) bits — about 2.3 bits for 5 words — because an attacker who knows the
+      method must also guess <em>which</em> word was capitalized. Small but real, and it helps satisfy
+      "must contain an uppercase letter" password rules.</p>
+    </details>
+    <details>
+      <summary>Is this estimate a guarantee?</summary>
+      <p>No — it is an estimate from a fixed, documented model. Real attackers may be weaker (they don't
+      know your method) or stronger (targeted phishing, malware). Treat it as a transparent benchmark,
+      not a promise.</p>
+    </details>
+    <details>
+      <summary>Does this site see my passphrase?</summary>
+      <p>No. There is no backend and no network requests. Words are drawn with the browser's
+      cryptographic random generator (<code>crypto.getRandomValues</code>) and everything happens inside
+      this page. Refresh the page and the passphrase is gone.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-links"><a href="/">Password Strength Checker</a> · <a href="/passphrase-generator">Passphrase Generator</a></p>
+    <p>PasswordLab — free password strength checker. Estimates only; nothing is ever transmitted anywhere. Word list: EFF Short Word List 2.0.</p>
+  </div>
+</footer>
+
+<script src="../passphrase.js"></script>
+</body>
+</html>
