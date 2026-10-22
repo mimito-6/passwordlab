@@ -163,6 +163,21 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 4px 0 0;
   line-height: 1.5;
   margin: 12px 0 18px;
 }
+.pw-output {
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 16px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  word-break: break-all;
+  line-height: 1.5;
+  margin: 12px 0 18px;
+}
+.btn-row { display: flex; gap: 8px; margin-bottom: 18px; }
+.btn-row .copy-btn { width: auto; flex: 1; }
+.check-grid { display: flex; flex-wrap: wrap; gap: 10px 22px; }
 .method ul { padding-left: 22px; }
 .method li { margin-bottom: 8px; }
 .method a { color: var(--accent); }
