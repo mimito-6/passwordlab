@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Random Password Generator — Strong, Cryptographically Random | PasswordLab</title>
+<meta name="description" content="Generate a strong random password in your browser: choose length and character classes, get an honest entropy and crack-time estimate. Crypto-random, no server, nothing leaves your device.">
+<meta name="keywords" content="random password generator, strong password generator, secure password generator, generate password online, password entropy">
+<meta property="og:title" content="Random Password Generator — Strong & Private">
+<meta property="og:description" content="Cryptographically random passwords with an honest entropy estimate. Runs entirely in your browser — nothing is sent anywhere.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/password-generator">
+<link rel="canonical" href="https://password.mimito6.uk/password-generator">
+<link rel="stylesheet" href="../styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab Random Password Generator",
+  "url": "https://password.mimito6.uk/password-generator",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Generates cryptographically random passwords from user-selected character classes, with an honest entropy and crack-time estimate. Runs entirely in the browser; nothing ever leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "How random is the generated password?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Each character is drawn with the browser's cryptographic random number generator (crypto.getRandomValues) using rejection sampling, so there is no modulo bias. The password is generated on your device only — there is no server and no network request."}},
+    {"@type": "Question", "name": "What does 'require one of each class' change about the entropy?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Without that option, entropy is length times log2 of the pool size. With it on, the generator rejection-samples until every selected class appears at least once, so the result is uniform over exactly those strings, and the reported entropy is log2 of that exact count (computed by inclusion-exclusion). The difference is small: a 16-character password from all four classes is 103.9 bits without the requirement and 103.6 bits with it."}},
+    {"@type": "Question", "name": "How long should my password be?",
+     "acceptedAnswer": {"@type": "Answer", "text": "12 characters from all four classes (≈77.4 bits) is a solid minimum for important accounts; 16 characters (≈103.6 bits with the per-class requirement) is comfortably beyond any offline brute-force attack in the model. Length matters more than exotic symbols: adding 4 characters multiplies the search space by 90^4 — about 66 million."}},
+    {"@type": "Question", "name": "What does 'exclude ambiguous characters' remove?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Exactly six characters: 0, O, 1, l, I and | — the ones people most often misread. Removing them shrinks the full pool from 90 to 84 characters, which costs only about 1.7 bits on a 16-character password, so readability is nearly free."}},
+    {"@type": "Question", "name": "Is this estimate a guarantee?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. It is an estimate from a fixed, documented model: an offline attack at 10 billion guesses per second against the full random space. Real attackers may be weaker (they don't know your method) or stronger (targeted phishing, malware, or a leaked database). Treat it as a transparent benchmark, not a promise."}},
+    {"@type": "Question", "name": "Does this site see my password?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. There is no backend and no network requests. Generation and all math happen inside this page. Refreshing the page destroys the password — copy it into a password manager before you leave."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/">Strength Checker</a>
+      <a href="/passphrase-generator">Passphrase Generator</a>
+      <a href="/password-generator" aria-current="page">Password Generator</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Random Password Generator</h1>
+
+  <section class="tool" aria-label="Password generator">
+    <div class="opt-row">
+      <label for="lenRange" class="pw-label">Length: <span id="lenLabel">16</span></label>
+      <input type="range" id="lenRange" min="8" max="64" value="16" step="1" aria-label="Password length">
+    </div>
+    <div class="opt-row">
+      <span class="pw-label">Character classes</span>
+      <div class="check-grid">
+        <label class="check-label"><input type="checkbox" id="lowerCheck" checked> Lowercase (a–z)</label>
+        <label class="check-label"><input type="checkbox" id="upperCheck" checked> Uppercase (A–Z)</label>
+        <label class="check-label"><input type="checkbox" id="digitsCheck" checked> Digits (0–9)</label>
+        <label class="check-label"><input type="checkbox" id="symbolsCheck" checked> Symbols (!@#$…)</label>
+      </div>
+    </div>
+    <div class="opt-row">
+      <label class="check-label"><input type="checkbox" id="requireCheck" checked> Require at least one of each selected class</label>
+    </div>
+    <div class="opt-row">
+      <label class="check-label"><input type="checkbox" id="ambiguousCheck"> Exclude ambiguous characters <span class="opt-note">(0, O, 1, l, I, |)</span></label>
+    </div>
+    <button id="genBtn" type="button" class="copy-btn">🎲 Generate password</button>
+
+    <p class="privacy">🔒 Drawn with <code>crypto.getRandomValues</code>, 100% in your browser. Nothing is sent anywhere — refresh the page and the password is gone. Store it in a password manager.</p>
+
+    <p class="warn" id="error" hidden></p>
+
+    <div class="result" id="result" hidden>
+      <div class="verdict" id="verdict">–</div>
+      <div class="pw-output" id="output" data-hidden="false" aria-live="polite">–</div>
+      <div class="btn-row">
+        <button id="showBtn" type="button" class="copy-btn">Hide</button>
+        <button id="copyBtn" type="button" class="copy-btn">📋 Copy password</button>
+      </div>
+      <p class="copy-hint" id="copyHint" hidden>Copied to clipboard.</p>
+      <div class="bignum" id="bignum">–</div>
+      <div class="bignum-sub">estimated time to crack</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">Entropy</span><span class="stat-v" id="entropy">–</span></div>
+        <div class="stat"><span class="stat-k">Pool size</span><span class="stat-v" id="poolSize">–</span></div>
+        <div class="stat"><span class="stat-k">Combinations</span><span class="stat-v" id="combos">–</span></div>
+      </div>
+      <div class="charset" id="classChips" aria-label="Character classes used"></div>
+    </div>
+
+    <p class="model-note"><strong>Estimate</strong> — offline attack at 10 billion guesses/sec; with the per-class requirement on, entropy is the exact log₂ of the rejection-sampled space.</p>
+  </section>
+
+  <section class="method" aria-label="How the estimate works">
+    <h2>How this estimate works</h2>
+    <p>Entropy = length × log₂(pool size) when every character is a uniform random pick from the
+    selected pool. With "require at least one of each class" on, the generator draws uniform strings
+    until one contains every selected class, so the result is uniform over exactly that set — and the
+    reported entropy is log₂ of its exact count, computed by inclusion-exclusion. Crack time =
+    2<sup>entropy</sup> ÷ 10,000,000,000 guesses per second.</p>
+    <h3>Quick reference (all four classes, requirement on)</h3>
+    <ul>
+      <li><strong>8 characters</strong> — ≈50.9 bits. Too short for anything important.</li>
+      <li><strong>12 characters</strong> — ≈77.4 bits. A solid minimum for important accounts.</li>
+      <li><strong>16 characters</strong> — ≈103.6 bits, about 49 trillion years in this model. Comfortable overkill.</li>
+      <li><strong>8 lowercase-only characters</strong> — ≈37.6 bits, about 21 seconds. Length without variety is not enough.</li>
+    </ul>
+    <p class="honest">The model assumes a blind offline brute-force attack. A password that has already
+    leaked, or one you reuse across sites, is compromised regardless of its entropy — check new
+    passwords with the <a href="/">strength checker</a> and keep them in a password manager.</p>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>How random is the generated password?</summary>
+      <p>Each character comes from <code>crypto.getRandomValues</code> with rejection sampling (no
+      modulo bias), entirely on your device. There is no server, no analytics, no network request.</p>
+    </details>
+    <details>
+      <summary>What does "require one of each class" change about the entropy?</summary>
+      <p>Without it, entropy is length × log₂(pool size). With it on, the generator rejection-samples
+      until every selected class appears, and the reported entropy is the exact log₂ of that
+      constrained space (inclusion-exclusion). The gap is small: 16 characters from all four classes
+      is 103.9 bits unconstrained vs 103.6 bits constrained.</p>
+    </details>
+    <details>
+      <summary>How long should my password be?</summary>
+      <p>12 characters from all four classes (≈77.4 bits) is a solid minimum; 16 (≈103.6 bits) is
+      comfortably beyond offline brute force in this model. Prefer a password manager over memorizing
+      long strings — and prefer a <a href="/passphrase-generator">passphrase</a> when you must remember it.</p>
+    </details>
+    <details>
+      <summary>What does "exclude ambiguous characters" remove?</summary>
+      <p>Exactly six characters: 0, O, 1, l, I and |. The full pool drops from 90 to 84 characters,
+      costing only about 1.7 bits on a 16-character password — readability is nearly free.</p>
+    </details>
+    <details>
+      <summary>Is this estimate a guarantee?</summary>
+      <p>No — it is an estimate from a fixed, documented model. Real attackers may be weaker (they don't
+      know your method) or stronger (phishing, malware, leaked databases). Treat it as a transparent
+      benchmark, not a promise.</p>
+    </details>
+    <details>
+      <summary>Does this site see my password?</summary>
+      <p>No. Generation and all math happen inside this page. Refreshing destroys the password, so
+      copy it into a password manager before you leave.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-links"><a href="/">Password Strength Checker</a> · <a href="/passphrase-generator">Passphrase Generator</a> · <a href="/password-generator">Password Generator</a></p>
+    <p>PasswordLab — free password tools. Estimates only; nothing is ever transmitted anywhere.</p>
+  </div>
+</footer>
+
+<script src="../password.js"></script>
+</body>
+</html>
