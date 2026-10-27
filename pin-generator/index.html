@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure PIN Generator — Random Phone & ATM PINs | PasswordLab</title>
+<meta name="description" content="Generate a cryptographically random PIN: choose 4–12 digits, get honest entropy, combination count and lockout odds. Runs entirely in your browser — nothing leaves your device.">
+<meta name="keywords" content="pin generator, random pin generator, secure pin code generator, phone pin generator, atm pin generator">
+<meta property="og:title" content="Secure PIN Generator — Random & Private">
+<meta property="og:description" content="Cryptographically random PINs with honest math: entropy, combinations, and the lockout odds that actually protect a PIN. Runs entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/pin-generator">
+<link rel="canonical" href="https://password.mimito6.uk/pin-generator">
+<link rel="stylesheet" href="../styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab Secure PIN Generator",
+  "url": "https://password.mimito6.uk/pin-generator",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Generates cryptographically random numeric PINs of 4-12 digits, with honest entropy, combination counts and lockout odds. Runs entirely in the browser; nothing ever leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Is a 6-digit PIN secure?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Only behind a lockout. A 6-digit PIN has just 1,000,000 combinations (19.9 bits), so an offline attack against a leaked hash would crack it in a fraction of a second. On a phone that locks after 10 wrong tries, an attacker has only a 0.001% chance of guessing it — that lockout, not the PIN itself, is what protects you."}},
+    {"@type": "Question", "name": "How random is the generated PIN?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Each digit is drawn with the browser's cryptographic random number generator (crypto.getRandomValues) using rejection sampling, so there is no modulo bias and no pattern. The PIN is generated on your device only — there is no server and no network request."}},
+    {"@type": "Question", "name": "What does 'allow leading zero' change?",
+     "acceptedAnswer": {"@type": "Answer", "text": "A 6-digit PIN that may start with 0 has 1,000,000 combinations; forbidding a leading zero leaves 900,000 (19.8 bits instead of 19.9). The difference is tiny, but some systems reject PINs starting with 0, so the option exists for compatibility — not for security."}},
+    {"@type": "Question", "name": "Why not just use a longer password instead?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Wherever a full password or passphrase is accepted, use one — a 12-character password has about 77 bits versus 19.9 bits for a 6-digit PIN. PINs exist because some systems (phones, ATMs, door locks) only accept digits; this generator makes the best of that constraint, it does not make a PIN equal to a password."}},
+    {"@type": "Question", "name": "Should I avoid birthdays and patterns?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Yes, if you pick your own PIN — attackers try birthdays, years, 1234 and repeated digits first. A PIN from this generator is uniform random, so it has no such weakness; the risk only returns if you replace it with a memorable date."}},
+    {"@type": "Question", "name": "Does this site see my PIN?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. There is no backend and no network requests. Generation and all math happen inside this page. Refreshing the page destroys the PIN — memorize it or store it in a password manager before you leave."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/">Strength Checker</a>
+      <a href="/passphrase-generator">Passphrase Generator</a>
+      <a href="/password-generator">Password Generator</a>
+      <a href="/pin-generator" aria-current="page">PIN Generator</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Secure PIN Generator</h1>
+
+  <section class="tool" aria-label="PIN generator">
+    <div class="opt-row">
+      <label for="pinLenRange" class="pw-label">Length: <span id="pinLenLabel">6</span> digits</label>
+      <input type="range" id="pinLenRange" min="4" max="12" value="6" step="1" aria-label="PIN length">
+    </div>
+    <div class="opt-row">
+      <label class="check-label"><input type="checkbox" id="leadingZeroCheck" checked> Allow leading zero <span class="opt-note">(a PIN may start with 0)</span></label>
+    </div>
+    <button id="genBtn" type="button" class="copy-btn">🎲 Generate PIN</button>
+
+    <p class="privacy">🔒 Drawn with <code>crypto.getRandomValues</code>, 100% in your browser. Nothing is sent anywhere — refresh the page and the PIN is gone. Memorize it or store it in a password manager.</p>
+
+    <p class="warn note">⚠️ A PIN is only safe behind a lockout. Offline, even a 12-digit PIN falls in about 1.7 minutes at 10 billion guesses/sec — see below. Never use a PIN as the sole secret on anything that does not lock you out after a few wrong tries.</p>
+
+    <div class="result" id="result" hidden>
+      <div class="verdict" id="verdict">–</div>
+      <div class="pw-output" id="output" data-hidden="false" aria-live="polite">–</div>
+      <div class="btn-row">
+        <button id="showBtn" type="button" class="copy-btn">Hide</button>
+        <button id="copyBtn" type="button" class="copy-btn">📋 Copy PIN</button>
+      </div>
+      <p class="copy-hint" id="copyHint" hidden>Copied to clipboard.</p>
+      <div class="bignum" id="bignum">–</div>
+      <div class="bignum-sub">offline crack time (10 billion guesses/sec) — the brutal model</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">Entropy</span><span class="stat-v" id="entropy">–</span></div>
+        <div class="stat"><span class="stat-k">Combinations</span><span class="stat-v" id="combos">–</span></div>
+        <div class="stat"><span class="stat-k">Average guesses</span><span class="stat-v" id="avgGuesses">–</span></div>
+        <div class="stat"><span class="stat-k">Chance in 10 tries</span><span class="stat-v" id="lockoutChance">–</span></div>
+      </div>
+    </div>
+
+    <p class="model-note"><strong>Two models, both honest.</strong> Offline crack time assumes a leaked hash attacked at 10 billion guesses/sec. "Chance in 10 tries" assumes the device locks after 10 wrong attempts — the model that actually governs phones, ATMs and door locks.</p>
+  </section>
+
+  <section class="method" aria-label="How the estimate works">
+    <h2>How this estimate works</h2>
+    <p>Entropy = log₂(combinations). With a leading zero allowed, combinations = 10<sup>length</sup>;
+    without one, 9 × 10<sup>length−1</sup>. Offline crack time = 2<sup>entropy</sup> ÷ 10,000,000,000
+    guesses per second — the same documented model as the rest of PasswordLab.</p>
+    <h3>Quick reference (leading zero allowed)</h3>
+    <ul>
+      <li><strong>4 digits</strong> — 13.3 bits, 10,000 combinations. A 10-try lockout still leaves a 0.1% guess chance — fine only on a device that truly locks.</li>
+      <li><strong>6 digits</strong> — 19.9 bits, 1,000,000 combinations. The standard phone PIN; 0.001% in 10 tries, but offline it falls instantly.</li>
+      <li><strong>8 digits</strong> — 26.6 bits, 100 million combinations. Noticeably better, and still easy to type.</li>
+      <li><strong>12 digits</strong> — 39.9 bits, 1 trillion combinations. Offline crack time about 1.7 minutes — which is the point: no PIN is strong offline.</li>
+    </ul>
+    <p class="honest">The lockout is the security, not the digits. If a system lets an attacker try
+    unlimited PINs, no PIN length saves it — use a password or a <a href="/passphrase-generator">passphrase</a>
+    there instead. And never reuse a PIN you picked yourself from a birthday, a year, or a pattern:
+    this generator's output is uniform random, so it carries none of that risk.</p>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>Is a 6-digit PIN secure?</summary>
+      <p>Only behind a lockout. It has just 1,000,000 combinations (19.9 bits), so an offline attack
+      against a leaked hash cracks it in a fraction of a second. On a phone that locks after 10 wrong
+      tries, an attacker has only a 0.001% chance — the lockout, not the PIN, is what protects you.</p>
+    </details>
+    <details>
+      <summary>How random is the generated PIN?</summary>
+      <p>Each digit comes from <code>crypto.getRandomValues</code> with rejection sampling (no
+      modulo bias), entirely on your device. There is no server, no analytics, no network request.</p>
+    </details>
+    <details>
+      <summary>What does "allow leading zero" change?</summary>
+      <p>A 6-digit PIN that may start with 0 has 1,000,000 combinations; forbidding a leading zero
+      leaves 900,000 (19.8 bits vs 19.9). The gap is tiny — the option exists because some systems
+      reject PINs starting with 0, not because it matters for security.</p>
+    </details>
+    <details>
+      <summary>Why not just use a longer password instead?</summary>
+      <p>Wherever a full password or passphrase is accepted, use one: a 12-character password has
+      about 77 bits versus 19.9 bits for a 6-digit PIN. PINs exist because some systems (phones,
+      ATMs, door locks) only accept digits; this generator makes the best of that constraint.</p>
+    </details>
+    <details>
+      <summary>Should I avoid birthdays and patterns?</summary>
+      <p>Yes, if you pick your own PIN — attackers try birthdays, years, 1234 and repeated digits
+      first. A PIN from this generator is uniform random and has no such weakness; the risk only
+      returns if you replace it with a memorable date.</p>
+    </details>
+    <details>
+      <summary>Does this site see my PIN?</summary>
+      <p>No. Generation and all math happen inside this page. Refreshing destroys the PIN, so
+      memorize it or store it in a password manager before you leave.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-links"><a href="/">Password Strength Checker</a> · <a href="/passphrase-generator">Passphrase Generator</a> · <a href="/password-generator">Password Generator</a> · <a href="/pin-generator">PIN Generator</a></p>
+    <p>PasswordLab — free password tools. Estimates only; nothing is ever transmitted anywhere.</p>
+  </div>
+</footer>
+
+<script src="../pin.js"></script>
+</body>
+</html>
