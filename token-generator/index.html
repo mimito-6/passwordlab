@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Random Token Generator — API Keys & Session Tokens | PasswordLab</title>
+<meta name="description" content="Generate a cryptographically random token for API keys, session tokens and reset links: hex, base64url or alphanumeric, with honest entropy and combination counts. Runs entirely in your browser — nothing leaves your device.">
+<meta name="keywords" content="random token generator, api key generator, session token generator, random hex generator, base64url token generator">
+<meta property="og:title" content="Random Token Generator — API Keys & Session Tokens">
+<meta property="og:description" content="Cryptographically random tokens with honest math: entropy, combinations, and why a leaked token must be rotated, not trusted on bits alone. Runs entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/token-generator">
+<link rel="canonical" href="https://password.mimito6.uk/token-generator">
+<link rel="stylesheet" href="../styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab Random Token Generator",
+  "url": "https://password.mimito6.uk/token-generator",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Generates cryptographically random tokens in hex, base64url or alphanumeric form, with honest entropy and combination counts. Runs entirely in the browser; nothing ever leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "What is a token, and how is it different from a password?",
+     "acceptedAnswer": {"@type": "Answer", "text": "A token is a random string a machine checks, not a human: an API key, a session token, or a password-reset link. It is never meant to be memorized, so it can be long and drawn from a restricted alphabet. A password must survive human memory; a token only has to survive guessing."}},
+    {"@type": "Question", "name": "Which format should I pick?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Hex if the receiving system expects hexadecimal (32 hex characters = 128 bits). Base64url if the token travels in a URL or header and must never need escaping (32 characters = 192 bits). Alphanumeric if symbols are disallowed (32 characters = 190.5 bits). At the same length, base64url carries the most entropy per character; at 32 characters all three are at or above the 128-bit bar."}},
+    {"@type": "Question", "name": "How long should a token be?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Aim for at least 128 bits: 32 hex characters, or 22 base64url characters (132 bits). Shorter tokens are genuinely guessable — a 16-character hex token has only 64 bits and an offline attacker exhausts it in about 58.5 years at 10 billion guesses per second, which is a real budget for a valuable target, not a theoretical one."}},
+    {"@type": "Question", "name": "How random is the generated token?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Each character is drawn with the browser's cryptographic random number generator (crypto.getRandomValues) using rejection sampling, so there is no modulo bias and no pattern. The token is generated on your device only — there is no server and no network request."}},
+    {"@type": "Question", "name": "What if a token leaks?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Rotate it immediately. Entropy measures how hard a token is to guess, not how safe it is once known: a leaked 256-bit token is compromised in zero guesses. Revoke the old token, issue a new one, and check logs for use of the leaked value."}},
+    {"@type": "Question", "name": "Does this site see my token?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. There is no backend and no network requests. Generation and all math happen inside this page. Refreshing the page destroys the token — copy it into your secret store before you leave."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/">Strength Checker</a>
+      <a href="/passphrase-generator">Passphrase Generator</a>
+      <a href="/password-generator">Password Generator</a>
+      <a href="/pin-generator">PIN Generator</a>
+      <a href="/token-generator" aria-current="page">Token Generator</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Random Token Generator</h1>
+
+  <section class="tool" aria-label="Token generator">
+    <div class="opt-row">
+      <span class="pw-label">Format</span>
+      <div class="radio-group">
+        <label><input type="radio" name="tokFormat" value="hex" checked> Hex</label>
+        <label><input type="radio" name="tokFormat" value="base64url"> Base64url</label>
+        <label><input type="radio" name="tokFormat" value="alphanumeric"> Alphanumeric</label>
+      </div>
+    </div>
+    <div class="opt-row">
+      <label for="tokLenRange" class="pw-label">Length: <span id="tokLenLabel">32</span> characters</label>
+      <input type="range" id="tokLenRange" min="16" max="64" value="32" step="1" aria-label="Token length">
+    </div>
+    <button id="genBtn" type="button" class="copy-btn">🎲 Generate Token</button>
+
+    <p class="privacy">🔒 Drawn with <code>crypto.getRandomValues</code>, 100% in your browser. Nothing is sent anywhere — refresh the page and the token is gone. Copy it into your secret store before you leave.</p>
+
+    <p class="warn note">⚠️ Entropy is not safety after a leak. A leaked token is compromised in zero guesses, no matter how many bits it has — rotate it immediately (see FAQ).</p>
+
+    <div class="result" id="result" hidden>
+      <div class="verdict" id="verdict">–</div>
+      <div class="pw-output" id="output" data-hidden="false" aria-live="polite">–</div>
+      <div class="btn-row">
+        <button id="showBtn" type="button" class="copy-btn">Hide</button>
+        <button id="copyBtn" type="button" class="copy-btn">📋 Copy Token</button>
+      </div>
+      <p class="copy-hint" id="copyHint" hidden>Copied to clipboard.</p>
+      <div class="bignum" id="bignum">–</div>
+      <div class="bignum-sub">offline crack time (10 billion guesses/sec) — the same model as the rest of PasswordLab</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">Entropy</span><span class="stat-v" id="entropy">–</span></div>
+        <div class="stat"><span class="stat-k">Combinations</span><span class="stat-v" id="combos">–</span></div>
+      </div>
+    </div>
+
+    <p class="model-note"><strong>Model.</strong> Entropy = length × log₂(alphabet size): hex 4.0 bits per character, base64url 6.0, alphanumeric 5.95. Crack time = combinations ÷ 10 billion guesses/sec — an optimistic upper bound, since real attackers exploit leaks, not brute force.</p>
+  </section>
+
+  <section class="method" aria-label="How the estimate works">
+    <h2>How this estimate works</h2>
+    <p>Each character is a uniform pick from its format's alphabet, drawn with
+    <code>crypto.getRandomValues</code> and rejection sampling (no modulo bias). Entropy is
+    length × log₂(alphabet size); combinations are alphabet size to the power of length.</p>
+    <h3>Quick reference</h3>
+    <ul>
+      <li><strong>Hex, 32 characters</strong> — 128.0 bits, 3.4 × 10^38 combinations. The standard target: a 128-bit secret.</li>
+      <li><strong>Base64url, 32 characters</strong> — 192.0 bits, 6.3 × 10^57 combinations. Most entropy per character; URL-safe with no escaping.</li>
+      <li><strong>Alphanumeric, 32 characters</strong> — 190.5 bits. For systems that reject symbols like <code>-</code> and <code>_</code>.</li>
+      <li><strong>Hex, 16 characters</strong> — 64.0 bits. Below the modern bar: an offline attacker exhausts it in about 58.5 years at 10 billion guesses/sec — a real budget for a valuable target.</li>
+      <li><strong>Base64url, 22 characters</strong> — 132.0 bits. The shortest base64url token that clears 128 bits.</li>
+    </ul>
+    <p class="honest">Tokens are for machines, not memory: if a system makes a human type the
+    secret, use a <a href="/password-generator">password</a> or a
+    <a href="/passphrase-generator">passphrase</a> instead. And never use a token as a
+    password you type daily — a copied secret belongs in a password manager or secret store,
+    not in your head.</p>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>What is a token, and how is it different from a password?</summary>
+      <p>A token is a random string a machine checks, not a human: an API key, a session token,
+      or a password-reset link. It is never meant to be memorized, so it can be long and drawn
+      from a restricted alphabet. A password must survive human memory; a token only has to
+      survive guessing.</p>
+    </details>
+    <details>
+      <summary>Which format should I pick?</summary>
+      <p>Hex if the receiving system expects hexadecimal (32 hex characters = 128 bits).
+      Base64url if the token travels in a URL or header and must never need escaping
+      (32 characters = 192 bits). Alphanumeric if symbols are disallowed (32 characters =
+      190.5 bits). At 32 characters all three clear the 128-bit bar.</p>
+    </details>
+    <details>
+      <summary>How long should a token be?</summary>
+      <p>Aim for at least 128 bits: 32 hex characters, or 22 base64url characters (132 bits).
+      A 16-character hex token has only 64 bits and an offline attacker exhausts it in about
+      58.5 years at 10 billion guesses/sec — a real budget for a valuable target.</p>
+    </details>
+    <details>
+      <summary>How random is the generated token?</summary>
+      <p>Each character comes from <code>crypto.getRandomValues</code> with rejection sampling
+      (no modulo bias), entirely on your device. There is no server, no analytics, no network
+      request.</p>
+    </details>
+    <details>
+      <summary>What if a token leaks?</summary>
+      <p>Rotate it immediately. Entropy measures how hard a token is to guess, not how safe it
+      is once known: a leaked 256-bit token is compromised in zero guesses. Revoke the old
+      token, issue a new one, and check logs for use of the leaked value.</p>
+    </details>
+    <details>
+      <summary>Does this site see my token?</summary>
+      <p>No. Generation and all math happen inside this page. Refreshing destroys the token, so
+      copy it into your secret store before you leave.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-links"><a href="/">Password Strength Checker</a> · <a href="/passphrase-generator">Passphrase Generator</a> · <a href="/password-generator">Password Generator</a> · <a href="/pin-generator">PIN Generator</a> · <a href="/token-generator">Token Generator</a></p>
+    <p>PasswordLab — free password tools. Estimates only; nothing is ever transmitted anywhere.</p>
+  </div>
+</footer>
+
+<script src="../token.js"></script>
+</body>
+</html>
