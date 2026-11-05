@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Password Length Calculator — How Long Must a Password Be? | PasswordLab</title>
+<meta name="description" content="Pick a character set and a target survival time, and get the minimum random-password length that survives an offline attack at 10 billion guesses/sec. The inverse of a strength checker — honest math, in your browser.">
+<meta name="keywords" content="password length calculator, how long should my password be, minimum password length, password entropy calculator, how many characters password">
+<meta property="og:title" content="Password Length Calculator — How Long Must a Password Be?">
+<meta property="og:description" content="Choose a character set and a target survival time, get the minimum length for a random password. Honest offline-attack math, entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/password-length">
+<link rel="canonical" href="https://password.mimito6.uk/password-length">
+<link rel="stylesheet" href="../styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab Password Length Calculator",
+  "url": "https://password.mimito6.uk/password-length",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Computes the minimum length of a uniform random password that survives an offline attack at 10 billion guesses per second for a chosen target time. Runs entirely in the browser; nothing ever leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "How long should my password be?",
+     "acceptedAnswer": {"@type": "Answer", "text": "For an everyday account, 12 random characters from all four character classes (about 79 bits) survive an offline attack for roughly 1.5 million years in this model — far beyond any realistic need. 10 characters already survive 100 years. The binding constraint is usually not length but randomness: a memorable 12-character phrase is far weaker than a random one."}},
+    {"@type": "Question", "name": "Why does one character matter so much?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Each added character multiplies the search space by the pool size. With all four classes (94 characters), one character multiplies an attacker's work by 94. That is why 9 random characters survive about 1.8 years offline while 10 survive about 170 years — a single character is a 94x cliff, not a small improvement."}},
+    {"@type": "Question", "name": "Does this assume my password is random?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Yes, and that assumption is load-bearing. The math counts every combination of the character set as equally likely. A password built from words, dates, or patterns has a much smaller real search space — check such passwords with the Strength Checker instead, which applies penalties for common passwords, keyboard walks, and repeated patterns."}},
+    {"@type": "Question", "name": "Why is the target time so long — 100 years?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Because a leaked password hash can be attacked forever, at ever-faster hardware speeds. A password that survives a year today may fall in a decade as hardware improves. Aiming for 100 years of headroom costs only one or two extra characters, so it is cheap insurance against both time and faster hardware."}},
+    {"@type": "Question", "name": "What if my site only allows lowercase letters?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Then you need more characters to reach the same bits: 14 lowercase letters to survive 100 years, versus 10 from all four classes. If a site restricts the character set, compensate with length — and prefer a passphrase, which buys length you can actually remember."}},
+    {"@type": "Question", "name": "Is this a guarantee?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. It is an estimate from a fixed model: uniform random password, offline attack at 10 billion guesses per second, full search space. Real attackers use dictionaries and targeted methods, and future hardware will be faster. Treat the number as a planning target with generous headroom, not a promise."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/">Strength Checker</a>
+      <a href="/passphrase-generator">Passphrase Generator</a>
+      <a href="/password-generator">Password Generator</a>
+      <a href="/pin-generator">PIN Generator</a>
+      <a href="/token-generator">Token Generator</a>
+      <a href="/password-length" aria-current="page">Length Calculator</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Password Length Calculator</h1>
+
+  <section class="tool" aria-label="Password length calculator">
+    <p class="privacy">The inverse of a strength checker: instead of testing a password you have, find out how long a random password must be to survive as long as you need. 100% in your browser — nothing is sent anywhere.</p>
+
+    <div class="opt-row">
+      <span class="pw-label">Character classes in your password</span>
+      <label class="check-label"><input type="checkbox" id="lowerCheck" checked> Lowercase <span class="opt-note">(a–z, 26)</span></label><br>
+      <label class="check-label"><input type="checkbox" id="upperCheck" checked> Uppercase <span class="opt-note">(A–Z, 26)</span></label><br>
+      <label class="check-label"><input type="checkbox" id="digitCheck" checked> Digits <span class="opt-note">(0–9, 10)</span></label><br>
+      <label class="check-label"><input type="checkbox" id="symbolCheck" checked> Symbols <span class="opt-note">(~32 printable symbols)</span></label>
+    </div>
+    <div class="opt-row">
+      <label class="pw-label" for="targetSelect">How long must it survive an offline attack?</label>
+      <select id="targetSelect" aria-label="Target survival time">
+        <option value="86400">1 day</option>
+        <option value="2592000">1 month (30 days)</option>
+        <option value="31557600">1 year</option>
+        <option value="315576000">10 years</option>
+        <option value="3155760000" selected>100 years</option>
+        <option value="31557600000">1,000 years</option>
+      </select>
+    </div>
+    <button id="calcBtn" type="button" class="copy-btn">Calculate minimum length</button>
+
+    <div class="result" id="result" hidden>
+      <div class="verdict" id="verdict">–</div>
+      <div class="bignum" id="bignum">–</div>
+      <div class="bignum-sub">minimum length for a uniform random password</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">Pool size</span><span class="stat-v" id="poolSize">–</span></div>
+        <div class="stat"><span class="stat-k">Entropy needed</span><span class="stat-v" id="bitsNeeded">–</span></div>
+        <div class="stat"><span class="stat-k">Crack time at this length</span><span class="stat-v" id="crackAtMin">–</span></div>
+        <div class="stat"><span class="stat-k">One character shorter</span><span class="stat-v" id="crackOneShorter">–</span></div>
+      </div>
+    </div>
+
+    <p class="model-note"><strong>Model</strong> — offline attack at 10 billion guesses/sec, same as the rest of PasswordLab. Worst case = full search space (pool<sup>length</sup> ÷ rate), so the answer is conservative in your favour.</p>
+  </section>
+
+  <section class="method" aria-label="How the calculation works">
+    <h2>How this calculation works</h2>
+    <p>Bits needed = log₂(target seconds × 10,000,000,000). Minimum length = the smallest L with
+    pool<sup>L</sup> ≥ target seconds × rate — equivalently, ceil(bits needed ÷ log₂(pool)).
+    A 100-year target needs 64.8 bits, so with all four classes (94 characters, 6.55 bits each)
+    the answer is 10 characters; with lowercase only (4.70 bits each) it is 14.</p>
+    <h3>Quick reference (offline attack, 10 billion guesses/sec)</h3>
+    <ul>
+      <li><strong>8 random characters, all classes</strong> — 52.4 bits, about 7 days. Fine for a throwaway account, nowhere near enough for email or banking.</li>
+      <li><strong>10 random characters, all classes</strong> — 65.5 bits, about 170 years. The cheapest length that outlives any realistic attack window.</li>
+      <li><strong>12 random characters, all classes</strong> — 78.7 bits, about 1.5 million years. The standard recommendation, with enormous headroom for faster future hardware.</li>
+      <li><strong>14 lowercase-only characters</strong> — 65.8 bits, about 200 years (the minimum length that clears a 100-year target). When a site bans symbols and capitals, length is the only lever you have — use it.</li>
+    </ul>
+    <p class="honest">This page only answers the length question, and only for random passwords.
+    If your password is memorable — words, dates, patterns — its real strength is far lower than
+    the length suggests. Test it on the <a href="/">Strength Checker</a>, or generate a truly
+    random one with the <a href="/password-generator">Password Generator</a> or a
+    <a href="/passphrase-generator">passphrase</a>.</p>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>How long should my password be?</summary>
+      <p>For an everyday account, 12 random characters from all four classes (about 79 bits) survive
+      an offline attack for roughly 1.5 million years in this model. 10 characters already survive
+      100 years. The binding constraint is usually randomness, not length.</p>
+    </details>
+    <details>
+      <summary>Why does one character matter so much?</summary>
+      <p>Each added character multiplies the search space by the pool size. With all four classes
+      (94 characters), one character multiplies an attacker's work by 94 — 9 random characters
+      survive about 1.8 years offline, 10 survive about 170 years.</p>
+    </details>
+    <details>
+      <summary>Does this assume my password is random?</summary>
+      <p>Yes, and that assumption is load-bearing. The math counts every combination as equally
+      likely. A password built from words, dates, or patterns has a much smaller real search
+      space — check it with the Strength Checker, which penalizes common passwords, keyboard
+      walks, and repeated patterns.</p>
+    </details>
+    <details>
+      <summary>Why is the target time so long — 100 years?</summary>
+      <p>Because a leaked hash can be attacked forever, on ever-faster hardware. Aiming for
+      100 years of headroom costs only one or two extra characters, so it is cheap insurance
+      against both time and faster hardware.</p>
+    </details>
+    <details>
+      <summary>What if my site only allows lowercase letters?</summary>
+      <p>Then you need more characters for the same bits: 14 lowercase letters to survive 100
+      years, versus 10 from all four classes. Compensate with length — and prefer a passphrase,
+      which buys length you can actually remember.</p>
+    </details>
+    <details>
+      <summary>Is this a guarantee?</summary>
+      <p>No — it is an estimate from a fixed model (uniform random password, offline attack at
+      10 billion guesses/sec, full search space). Treat it as a planning target with generous
+      headroom, not a promise.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-links"><a href="/">Password Strength Checker</a> · <a href="/passphrase-generator">Passphrase Generator</a> · <a href="/password-generator">Password Generator</a> · <a href="/pin-generator">PIN Generator</a> · <a href="/token-generator">Token Generator</a> · <a href="/password-length">Length Calculator</a></p>
+    <p>PasswordLab — free password tools. Estimates only; nothing is ever transmitted anywhere.</p>
+  </div>
+</footer>
+
+<script src="../length.js"></script>
+</body>
+</html>
