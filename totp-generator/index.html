@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOTP Authenticator — 2FA Code Generator (RFC 6238) | PasswordLab</title>
+<meta name="description" content="Generate time-based one-time passwords (TOTP) for two-factor authentication: paste your Base32 secret and get the current 6- or 8-digit code, with SHA-1, SHA-256 or SHA-512 and 30- or 60-second periods. Runs entirely in your browser — nothing leaves your device.">
+<meta name="keywords" content="totp generator, 2fa code generator, totp authenticator, one-time password generator, rfc 6238, totp calculator, google authenticator code">
+<meta property="og:title" content="TOTP Authenticator — 2FA Code Generator (RFC 6238)">
+<meta property="og:description" content="Time-based one-time passwords computed with the exact RFC 6238 algorithm, verified against the official test vectors. Runs entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/totp-generator">
+<link rel="canonical" href="https://password.mimito6.uk/totp-generator">
+<link rel="stylesheet" href="../styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab TOTP Authenticator",
+  "url": "https://password.mimito6.uk/totp-generator",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Generates time-based one-time passwords (TOTP, RFC 6238) from a Base32 secret, with SHA-1/SHA-256/SHA-512, 6- or 8-digit codes, and 30- or 60-second periods. Runs entirely in the browser; nothing ever leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "What is TOTP, and how does it work?",
+     "acceptedAnswer": {"@type": "Answer", "text": "TOTP (RFC 6238) is the algorithm behind authenticator apps: you and the server share a secret, and both sides compute HMAC(secret, counter), where the counter is the current Unix time divided by 30 seconds. A few bytes are taken out of the HMAC and reduced modulo 1,000,000 to make a 6-digit code. Because both sides use the same clock, the codes match — and because the counter ticks every 30 seconds, each code expires fast."}},
+    {"@type": "Question", "name": "Should I paste my real 2FA secret into this page?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Only if you accept the risk. This page has no backend and sends nothing anywhere — the code is public on GitHub and you can inspect it — but any website can claim that, so a pasted secret is only as safe as your trust in the page. For production accounts, a dedicated authenticator app on your own device is the safer home for the secret. This tool is best for learning, testing, and accounts where you understand the trade-off. Never paste a secret into a page you reached from a link you did not trust."}},
+    {"@type": "Question", "name": "Why is a 6-digit code secure enough?",
+     "acceptedAnswer": {"@type": "Answer", "text": "It is not secure because it is hard to guess — 6 digits is only 1,000,000 possibilities. It is secure because each code lives for 30 seconds and the server rate-limits guesses, so an attacker cannot try enough codes in one window. The secret itself is the strong part; the code is just a short-lived proof that you hold it."}},
+    {"@type": "Question", "name": "My code does not work — what is wrong?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Almost always the clock. TOTP depends on both sides agreeing on the time, so if your device clock is off by more than 30 seconds the codes will not match. Turn on automatic time sync and try again. This page shows the previous and next codes too, because most servers accept one step of clock skew; if even those fail, the secret itself is probably wrong — check for a missing character."}},
+    {"@type": "Question", "name": "SHA-1, SHA-256 or SHA-512 — which should I use?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Whichever your service used when it issued the secret — the algorithm is part of the secret's setup, not a choice you make afterwards. SHA-1 is the default in almost every authenticator app and remains fine here, because HMAC-SHA-1 is not broken the way plain SHA-1 hashing is. If a service offers SHA-256, use it; the code will be different for the same secret and time."}},
+    {"@type": "Question", "name": "What is the otpauth:// link?",
+     "acceptedAnswer": {"@type": "Answer", "text": "It is the standard URI format authenticator apps use to import an account — the same data a QR code carries when a service shows you one. Copy it into an authenticator app that accepts manual URI import, or use it to move an account between apps. It contains your secret in plain text, so treat it like the secret itself: never share it or paste it into a chat."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/">Strength Checker</a>
+      <a href="/passphrase-generator">Passphrase Generator</a>
+      <a href="/password-generator">Password Generator</a>
+      <a href="/pin-generator">PIN Generator</a>
+      <a href="/token-generator">Token Generator</a>
+      <a href="/password-length">Length Calculator</a>
+      <a href="/pronounceable-password">Pronounceable Password</a>
+      <a href="/totp-generator" aria-current="page">TOTP Authenticator</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>TOTP Authenticator</h1>
+
+  <section class="tool" aria-label="TOTP authenticator">
+    <div class="opt-row">
+      <label for="totpSecret" class="pw-label">Your Base32 secret</label>
+      <input type="text" id="totpSecret" class="text-input" value="JBSWY3DPEHPK3PXP" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Base32 secret">
+      <p class="opt-note">Only A–Z and 2–7; lowercase and spaces are ignored. The demo secret above (JBSWY3DPEHPK3PXP) is a public example, not a real account.</p>
+    </div>
+    <div class="btn-row">
+      <button id="genSecretBtn" type="button" class="copy-btn">🎲 Generate a Test Secret</button>
+    </div>
+    <div class="opt-row">
+      <label for="totpAccount" class="pw-label">Account (optional, for the otpauth:// link)</label>
+      <input type="text" id="totpAccount" class="text-input" placeholder="alice@example.com" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="opt-row">
+      <label for="totpIssuer" class="pw-label">Issuer (optional)</label>
+      <input type="text" id="totpIssuer" class="text-input" placeholder="Example" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="opt-row">
+      <span class="pw-label">Algorithm</span>
+      <div class="radio-group">
+        <label><input type="radio" name="totpAlgo" value="SHA-1" checked> SHA-1</label>
+        <label><input type="radio" name="totpAlgo" value="SHA-256"> SHA-256</label>
+        <label><input type="radio" name="totpAlgo" value="SHA-512"> SHA-512</label>
+      </div>
+    </div>
+    <div class="opt-row">
+      <span class="pw-label">Digits</span>
+      <div class="radio-group">
+        <label><input type="radio" name="totpDigits" value="6" checked> 6 digits</label>
+        <label><input type="radio" name="totpDigits" value="8"> 8 digits</label>
+      </div>
+    </div>
+    <div class="opt-row">
+      <span class="pw-label">Period</span>
+      <div class="radio-group">
+        <label><input type="radio" name="totpPeriod" value="30" checked> 30 seconds</label>
+        <label><input type="radio" name="totpPeriod" value="60"> 60 seconds</label>
+      </div>
+    </div>
+
+    <p class="privacy">🔒 Computed with <code>crypto.subtle</code> HMAC, 100% in your browser. Nothing is sent anywhere — refresh the page and the secret is gone.</p>
+
+    <p class="warn note">⚠️ A website can claim anything about not sending your secret. Only paste a real 2FA secret here if you accept that risk — for production accounts, a dedicated authenticator app on your own device is the safer home (see FAQ).</p>
+
+    <p class="error-box" id="totpError" hidden></p>
+
+    <div class="result" id="result" hidden>
+      <div class="verdict" id="timeLeft">–</div>
+      <div class="progress" aria-hidden="true"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="totp-code" id="codeOut" aria-live="polite">–</div>
+      <div class="btn-row">
+        <button id="copyCodeBtn" type="button" class="copy-btn">📋 Copy Code</button>
+      </div>
+      <p class="copy-hint" id="copyHint" hidden>Copied to clipboard.</p>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">Previous code</span><span class="stat-v" id="prevCode">–</span></div>
+        <div class="stat"><span class="stat-k">Next code</span><span class="stat-v" id="nextCode">–</span></div>
+        <div class="stat"><span class="stat-k">Secret size</span><span class="stat-v" id="secretBits">–</span></div>
+      </div>
+      <p class="opt-note">Previous / next codes are shown because most servers accept one step of clock skew — if your code fails, try the previous one before assuming the secret is wrong.</p>
+      <div class="opt-row">
+        <span class="pw-label">otpauth:// link (contains your secret — treat it like the secret)</span>
+        <div class="uri-box" id="otpauthUri">–</div>
+        <div class="btn-row">
+          <button id="copyUriBtn" type="button" class="copy-btn">📋 Copy otpauth:// Link</button>
+        </div>
+        <p class="copy-hint" id="copyUriHint" hidden>Copied to clipboard.</p>
+      </div>
+    </div>
+
+    <p class="model-note"><strong>Model.</strong> Counter = floor(Unix time ÷ period); code = dynamic-truncate(HMAC-SHA(secret, counter)) mod 10^digits. A 6-digit code has only 1,000,000 possibilities — its safety comes from the 30-second window plus server rate limiting, not from being hard to guess.</p>
+  </section>
+
+  <section class="method" aria-label="How the estimate works">
+    <h2>How TOTP works</h2>
+    <p>Both sides share one secret. Every 30 seconds (or 60, if the service chose so),
+    the counter ticks up by one, both sides feed the secret and the counter into HMAC,
+    and a few bytes are taken out of the result to make the code. No network, no
+    counter syncing — just a shared secret and a shared clock.</p>
+    <h3>Check it yourself — RFC 6238 test vectors</h3>
+    <p>These are the official test values from RFC 6238, Appendix B. Secret
+    <code>12345678901234567890</code> (Base32
+    <code>GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ</code>), 8-digit codes:</p>
+    <ul>
+      <li>Unix time 59, SHA-1 → <strong>94287082</strong> (6-digit: 287082)</li>
+      <li>Unix time 1111111109, SHA-1 → <strong>07081804</strong></li>
+      <li>Unix time 1234567890, SHA-1 → <strong>89005924</strong></li>
+      <li>Unix time 2000000000, SHA-1 → <strong>69279037</strong></li>
+    </ul>
+    <p>Paste the Base32 secret above, pick SHA-1 and 8 digits, and this page's math
+    reproduces those numbers exactly — the implementation is verified against all 18
+    RFC vectors (6 times × 3 algorithms) before every release.</p>
+    <p class="honest">A TOTP code proves you hold the secret <em>right now</em>. It does not
+    prove the secret was never copied: anyone who has seen the secret can generate the
+    same codes forever, which is why a leaked secret must be revoked and re-issued,
+    not just waited out. And if you lose the secret, you lose the account's second
+    factor — save the secret (or the QR code) in your password manager when you set
+    up 2FA.</p>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>What is TOTP, and how does it work?</summary>
+      <p>TOTP (RFC 6238) is the algorithm behind authenticator apps: you and the server
+      share a secret, and both sides compute HMAC(secret, counter), where the counter is
+      the current Unix time divided by 30 seconds. A few bytes are taken out of the HMAC
+      and reduced modulo 1,000,000 to make a 6-digit code. Because both sides use the
+      same clock, the codes match — and because the counter ticks every 30 seconds, each
+      code expires fast.</p>
+    </details>
+    <details>
+      <summary>Should I paste my real 2FA secret into this page?</summary>
+      <p>Only if you accept the risk. This page has no backend and sends nothing anywhere
+      — the code is public on GitHub and you can inspect it — but any website can claim
+      that, so a pasted secret is only as safe as your trust in the page. For production
+      accounts, a dedicated authenticator app on your own device is the safer home for
+      the secret. This tool is best for learning, testing, and accounts where you
+      understand the trade-off. Never paste a secret into a page you reached from a link
+      you did not trust.</p>
+    </details>
+    <details>
+      <summary>Why is a 6-digit code secure enough?</summary>
+      <p>It is not secure because it is hard to guess — 6 digits is only 1,000,000
+      possibilities. It is secure because each code lives for 30 seconds and the server
+      rate-limits guesses, so an attacker cannot try enough codes in one window. The
+      secret itself is the strong part; the code is just a short-lived proof that you
+      hold it.</p>
+    </details>
+    <details>
+      <summary>My code does not work — what is wrong?</summary>
+      <p>Almost always the clock. TOTP depends on both sides agreeing on the time, so if
+      your device clock is off by more than 30 seconds the codes will not match. Turn on
+      automatic time sync and try again. This page shows the previous and next codes too,
+      because most servers accept one step of clock skew; if even those fail, the secret
+      itself is probably wrong — check for a missing character.</p>
+    </details>
+    <details>
+      <summary>SHA-1, SHA-256 or SHA-512 — which should I use?</summary>
+      <p>Whichever your service used when it issued the secret — the algorithm is part of
+      the secret's setup, not a choice you make afterwards. SHA-1 is the default in
+      almost every authenticator app and remains fine here, because HMAC-SHA-1 is not
+      broken the way plain SHA-1 hashing is. If a service offers SHA-256, use it; the
+      code will be different for the same secret and time.</p>
+    </details>
+    <details>
+      <summary>What is the otpauth:// link?</summary>
+      <p>It is the standard URI format authenticator apps use to import an account — the
+      same data a QR code carries when a service shows you one. Copy it into an
+      authenticator app that accepts manual URI import, or use it to move an account
+      between apps. It contains your secret in plain text, so treat it like the secret
+      itself: never share it or paste it into a chat.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-links"><a href="/">Password Strength Checker</a> · <a href="/passphrase-generator">Passphrase Generator</a> · <a href="/password-generator">Password Generator</a> · <a href="/pin-generator">PIN Generator</a> · <a href="/token-generator">Token Generator</a>
+      <a href="/password-length">Length Calculator</a> · <a href="/pronounceable-password">Pronounceable Password</a> · <a href="/totp-generator">TOTP Authenticator</a></p>
+    <p>PasswordLab — free password tools. Estimates only; nothing is ever transmitted anywhere.</p>
+  </div>
+</footer>
+
+<script src="../totp.js"></script>
+</body>
+</html>
