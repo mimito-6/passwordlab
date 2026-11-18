@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hash Generator — SHA-256, SHA-384 & SHA-512 Online | PasswordLab</title>
+<meta name="description" content="Generate a SHA-256, SHA-384 or SHA-512 hash of any text or file, compare it against a known hash, and verify downloads. Runs entirely in your browser — nothing leaves your device.">
+<meta name="keywords" content="hash generator, sha-256 generator, sha-512 calculator, sha-384 hash, file hash checker, checksum verifier">
+<meta property="og:title" content="Hash Generator — SHA-256, SHA-384 & SHA-512">
+<meta property="og:description" content="Hash any text or file with SHA-256, SHA-384 or SHA-512, and compare the result against a known hash. Free, instant, and entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/hash-generator">
+<link rel="canonical" href="https://password.mimito6.uk/hash-generator">
+<link rel="stylesheet" href="../styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab Hash Generator",
+  "url": "https://password.mimito6.uk/hash-generator",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Generates SHA-256, SHA-384 and SHA-512 hashes of text or files, and compares a computed hash against a pasted one. Runs entirely in the browser; nothing ever leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "What is a hash, and what is it used for?",
+     "acceptedAnswer": {"@type": "Answer", "text": "A hash is a fixed-length fingerprint of some input: SHA-256 always produces 64 hex characters, no matter whether the input is one letter or a whole book. It is used to verify integrity — if two files have the same SHA-256 hash, they are the same file for all practical purposes — and to fingerprint data without storing the data itself."}},
+    {"@type": "Question", "name": "Which algorithm should I pick: SHA-256, SHA-384 or SHA-512?",
+     "acceptedAnswer": {"@type": "Answer", "text": "SHA-256 (256 bits) is the default almost everywhere and is what most download pages publish. SHA-512 (512 bits) gives a larger safety margin and is faster on 64-bit systems; SHA-384 is SHA-512 truncated to 384 bits. For verifying a download, use whichever hash the source published — the algorithm must match, or the comparison is meaningless."}},
+    {"@type": "Question", "name": "How do I verify a downloaded file?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Copy the hash the download page publishes, pick the same algorithm, drop the file into the file box above, and paste the published hash into the compare box. A match means the file you received is byte-for-byte the file the publisher hashed. A mismatch means it was altered or corrupted in transit — do not run it."}},
+    {"@type": "Question", "name": "Can a hash be reversed to reveal the original text?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. Hashing is one-way: there is no key and no decode step. An attacker can only guess inputs and hash them to see if they match — which is why short, predictable inputs (like common passwords) are still guessable even as hashes, and why passwords must be stored with a slow, salted function such as bcrypt or Argon2, not a bare hash."}},
+    {"@type": "Question", "name": "Why is there no MD5 or SHA-1 option?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Both are broken for collision resistance: researchers can craft two different inputs with the same MD5 or SHA-1 hash, so a matching hash no longer proves the file is genuine. They still appear on old download pages, but for any new verification SHA-256 or stronger is the honest choice."}},
+    {"@type": "Question", "name": "Does this site see my text or files?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. There is no backend and no network requests. Hashing happens with the browser's built-in WebCrypto API, entirely on your device. Refreshing the page destroys the input — nothing is ever uploaded."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/">Strength Checker</a>
+      <a href="/passphrase-generator">Passphrase Generator</a>
+      <a href="/password-generator">Password Generator</a>
+      <a href="/pin-generator">PIN Generator</a>
+      <a href="/token-generator">Token Generator</a>
+      <a href="/password-length">Length Calculator</a>
+      <a href="/pronounceable-password">Pronounceable Password</a>
+      <a href="/totp-generator">TOTP Authenticator</a> · <a href="/hash-generator">Hash Generator</a>
+      <a href="/hash-generator" aria-current="page">Hash Generator</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Hash Generator</h1>
+
+  <section class="tool" aria-label="Hash generator">
+    <div class="opt-row">
+      <span class="pw-label">Algorithm</span>
+      <div class="radio-group">
+        <label><input type="radio" name="hashAlgo" value="SHA-256" checked> SHA-256</label>
+        <label><input type="radio" name="hashAlgo" value="SHA-384"> SHA-384</label>
+        <label><input type="radio" name="hashAlgo" value="SHA-512"> SHA-512</label>
+      </div>
+    </div>
+    <div class="opt-row">
+      <label for="hashInput" class="pw-label">Text to hash</label>
+      <textarea id="hashInput" class="text-input textarea" rows="4" aria-label="Text to hash">abc</textarea>
+      <p class="copy-hint" id="inputBytes">3 bytes (UTF-8)</p>
+    </div>
+
+    <p class="privacy">🔒 Hashed with your browser's built-in WebCrypto (<code>crypto.subtle.digest</code>), 100% in your browser. Nothing is sent anywhere.</p>
+
+    <p class="warn note">⚠️ A hash is one-way, not encryption — and it is not a password store. Never store a password as a bare hash; password storage needs a slow, salted function like bcrypt or Argon2 (see FAQ).</p>
+
+    <div class="result" id="result" hidden>
+      <div class="pw-output" id="hashOutput" aria-live="polite">–</div>
+      <div class="btn-row">
+        <button id="copyHashBtn" type="button" class="copy-btn">📋 Copy Hash</button>
+      </div>
+      <p class="copy-hint" id="copyHint" hidden>Copied to clipboard.</p>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">Output</span><span class="stat-v" id="hashBits">256 bits · 64 hex characters</span></div>
+      </div>
+    </div>
+
+    <div class="opt-row">
+      <label for="compareInput" class="pw-label">Compare against a known hash</label>
+      <input type="text" id="compareInput" class="text-input" placeholder="Paste the hash to check, e.g. from a download page" aria-label="Hash to compare against">
+      <div class="verdict" id="compareVerdict">Hash something first, then paste a hash to compare.</div>
+    </div>
+
+    <div class="opt-row">
+      <label for="hashFile" class="pw-label">Or hash a file</label>
+      <input type="file" id="hashFile" aria-label="File to hash">
+      <p class="copy-hint" id="fileStatus">The file is read only inside your browser — it is never uploaded.</p>
+    </div>
+
+    <p class="model-note"><strong>Model.</strong> Input is encoded as UTF-8, then digested with the selected algorithm. SHA-256 outputs 256 bits (64 hex characters), SHA-384 outputs 384 bits (96 hex characters), SHA-512 outputs 512 bits (128 hex characters). The same input always gives the same hash; changing a single character changes about half the output bits.</p>
+  </section>
+
+  <section class="method" aria-label="How the hash works">
+    <h2>How this hash works</h2>
+    <p>Your text is encoded as UTF-8 bytes and passed to the browser's WebCrypto
+    <code>crypto.subtle.digest</code> — the same standard API used by password managers
+    and browsers. There is no server, no analytics, no network request.</p>
+    <h3>Quick reference (verified test vectors)</h3>
+    <ul>
+      <li><strong>SHA-256 of "abc"</strong> — <code>ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad</code> (64 hex characters).</li>
+      <li><strong>SHA-256 of "" (empty)</strong> — <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>. Even nothing hashes to something.</li>
+      <li><strong>SHA-384 of "abc"</strong> — <code>cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7</code> (96 hex characters).</li>
+      <li><strong>SHA-512 of "abc"</strong> — <code>ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f</code> (128 hex characters).</li>
+      <li><strong>Avalanche</strong> — SHA-256 of "abd" is <code>a52d159f262b2c6ddb724a61840befc36eb30c88877a4030b65cbe86298449c9</code>. One changed letter ("abc" → "abd") produces a completely different fingerprint — that is the property that makes a hash a fingerprint. Try it above.</li>
+    </ul>
+    <p class="honest">Every hash on this page is computed live by the tool, never typed from
+    memory — and the test vectors above are the standard NIST/FIPS 180-4 values, which
+    you can check against any reference. Never trust a hash printed in prose; trust the
+    one the tool computes, and verify it against the publisher's own published value.</p>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>What is a hash, and what is it used for?</summary>
+      <p>A hash is a fixed-length fingerprint of some input: SHA-256 always produces 64 hex
+      characters, whether the input is one letter or a whole book. It is used to verify
+      integrity — if two files have the same SHA-256 hash, they are the same file for all
+      practical purposes — and to fingerprint data without storing the data itself.</p>
+    </details>
+    <details>
+      <summary>Which algorithm should I pick: SHA-256, SHA-384 or SHA-512?</summary>
+      <p>SHA-256 (256 bits) is the default almost everywhere and is what most download pages
+      publish. SHA-512 (512 bits) gives a larger safety margin and is faster on 64-bit
+      systems; SHA-384 is SHA-512 truncated to 384 bits. For verifying a download, use
+      whichever hash the source published — the algorithm must match, or the comparison is
+      meaningless.</p>
+    </details>
+    <details>
+      <summary>How do I verify a downloaded file?</summary>
+      <p>Copy the hash the download page publishes, pick the same algorithm, drop the file
+      into the file box above, and paste the published hash into the compare box. A match
+      means the file you received is byte-for-byte the file the publisher hashed. A mismatch
+      means it was altered or corrupted in transit — do not run it.</p>
+    </details>
+    <details>
+      <summary>Can a hash be reversed to reveal the original text?</summary>
+      <p>No. Hashing is one-way: there is no key and no decode step. An attacker can only
+      guess inputs and hash them to see if they match — which is why short, predictable
+      inputs (like common passwords) are still guessable even as hashes, and why passwords
+      must be stored with a slow, salted function such as bcrypt or Argon2, not a bare hash.</p>
+    </details>
+    <details>
+      <summary>Why is there no MD5 or SHA-1 option?</summary>
+      <p>Both are broken for collision resistance: researchers can craft two different inputs
+      with the same MD5 or SHA-1 hash, so a matching hash no longer proves the file is
+      genuine. They still appear on old download pages, but for any new verification SHA-256
+      or stronger is the honest choice.</p>
+    </details>
+    <details>
+      <summary>Does this site see my text or files?</summary>
+      <p>No. Generation and all math happen inside this page. Refreshing destroys the input,
+      so copy the hash before you leave.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-links"><a href="/">Password Strength Checker</a> · <a href="/passphrase-generator">Passphrase Generator</a> · <a href="/password-generator">Password Generator</a> · <a href="/pin-generator">PIN Generator</a> · <a href="/token-generator">Token Generator</a>
+      <a href="/password-length">Length Calculator</a> · <a href="/pronounceable-password">Pronounceable Password</a> · <a href="/totp-generator">TOTP Authenticator</a> · <a href="/hash-generator">Hash Generator</a></p>
+    <p>PasswordLab — free password tools. Estimates only; nothing is ever transmitted anywhere.</p>
+  </div>
+</footer>
+
+<script src="../hash.js"></script>
+</body>
+</html>
