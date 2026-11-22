@@ -226,3 +226,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 4px 0 0;
   .bignum { font-size: 1.7rem; }
   .tool, .method, .faq { padding: 16px; }
 }
+
+/* Backup Codes Generator */
+.code-list { list-style: none; padding: 0; margin: 14px 0 18px; }
+.code-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.code-row:last-child { border-bottom: none; }
+.code-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.15rem; font-weight: 700; letter-spacing: .08em; flex: 1; word-break: break-all; }
+.mini-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; padding: 4px 10px; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+.mini-btn:hover { background: rgba(88,166,255,.12); }
