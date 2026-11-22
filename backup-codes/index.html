@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backup Codes Generator — Single-Use 2FA Recovery Codes | PasswordLab</title>
+<meta name="description" content="Generate cryptographically random single-use backup codes for two-factor authentication: choose 8-digit, alphanumeric or 16-hex format, with honest per-code entropy and lockout odds. Runs entirely in your browser — nothing leaves your device.">
+<meta name="keywords" content="backup codes generator, 2fa backup codes, recovery codes generator, two factor backup codes, single-use recovery codes">
+<meta property="og:title" content="Backup Codes Generator — Single-Use 2FA Recovery Codes">
+<meta property="og:description" content="Cryptographically random single-use backup codes with honest math: per-code entropy, combinations, and the lockout odds that actually protect them. Runs entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/backup-codes">
+<link rel="canonical" href="https://password.mimito6.uk/backup-codes">
+<link rel="stylesheet" href="../styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab Backup Codes Generator",
+  "url": "https://password.mimito6.uk/backup-codes",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Generates cryptographically random single-use backup codes for two-factor authentication in 8-digit, alphanumeric or 16-hex format, with honest per-code entropy, combination counts and lockout odds. Runs entirely in the browser; nothing ever leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "What are backup codes?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Backup codes are single-use recovery codes a service gives you when you turn on two-factor authentication. Each code works once, as a spare key for the day you lose your phone or your authenticator app. Once a code is used it is burned and can never work again."}},
+    {"@type": "Question", "name": "Is an 8-digit backup code secure?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Against online guessing, yes: an 8-digit code has 100,000,000 combinations (26.6 bits), so an attacker who gets 10 tries before lockout has only a 0.00001% chance. The real risk is not guessing — it is the list leaking. Every code on a leaked list works, so a stolen list is a full compromise until you revoke and regenerate it."}},
+    {"@type": "Question", "name": "How should I store backup codes?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Offline and separate from your password: printed on paper in a safe place, or in your password manager. Never in a plain text file on your desktop, never as a screenshot in your photo roll, and never sent to yourself by email or chat — those are exactly the places that get copied in a breach."}},
+    {"@type": "Question", "name": "What happens when I run out of codes?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Generate a fresh set in your account's security settings. The new set replaces the old one — any unused codes from the old set stop working, so print or save the new list before you close the page."}},
+    {"@type": "Question", "name": "How random are the generated codes?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Each character is drawn with the browser's cryptographic random number generator (crypto.getRandomValues) using rejection sampling, so there is no modulo bias and no pattern. Generation and all math happen on your device only — there is no server and no network request."}},
+    {"@type": "Question", "name": "Does this site see my backup codes?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. There is no backend and no network requests. The codes exist only in this page; refreshing the page destroys them. Save or download them before you leave — this page cannot recover them for you, and neither can anyone else."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/">Strength Checker</a>
+      <a href="/passphrase-generator">Passphrase Generator</a>
+      <a href="/password-generator">Password Generator</a>
+      <a href="/pin-generator">PIN Generator</a>
+      <a href="/token-generator">Token Generator</a>
+      <a href="/password-length">Length Calculator</a>
+      <a href="/pronounceable-password">Pronounceable Password</a>
+      <a href="/totp-generator">TOTP Authenticator</a>
+      <a href="/hash-generator">Hash Generator</a>
+      <a href="/backup-codes" aria-current="page">Backup Codes</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Backup Codes Generator</h1>
+
+  <section class="tool" aria-label="Backup codes generator">
+    <div class="opt-row">
+      <label for="bcCountRange" class="pw-label">How many codes: <span id="bcCountLabel">10</span></label>
+      <input type="range" id="bcCountRange" min="5" max="20" value="10" step="1" aria-label="Number of backup codes">
+    </div>
+    <div class="opt-row">
+      <span class="pw-label">Format</span>
+      <div class="radio-group" role="radiogroup" aria-label="Code format">
+        <label class="check-label"><input type="radio" name="bcFormat" value="digits" checked> 8 digits <span class="opt-note">(1234 5678)</span></label>
+        <label class="check-label"><input type="radio" name="bcFormat" value="alnum"> 8 letters + digits <span class="opt-note">(Ab3d-Ef9K)</span></label>
+        <label class="check-label"><input type="radio" name="bcFormat" value="hex"> 16 hex <span class="opt-note">(0123-4567-89ab-cdef)</span></label>
+      </div>
+    </div>
+    <button id="genBtn" type="button" class="copy-btn">🎲 Generate New Set</button>
+
+    <p class="privacy">🔒 Drawn with <code>crypto.getRandomValues</code>, 100% in your browser. Nothing is sent anywhere — refresh the page and the codes are gone. Save or download them before you leave.</p>
+
+    <p class="warn note">⚠️ Each code works exactly once, and a leaked list is a full compromise: every code on it works until you revoke the set. Print the list or store it in a password manager — never as a screenshot or a plain file.</p>
+
+    <div class="result" id="result" hidden>
+      <div class="verdict" id="verdict">–</div>
+      <ol class="code-list" id="codeList" aria-live="polite"></ol>
+      <div class="btn-row">
+        <button id="showBtn" type="button" class="copy-btn">Hide</button>
+        <button id="copyAllBtn" type="button" class="copy-btn">📋 Copy All</button>
+        <button id="downloadBtn" type="button" class="copy-btn">⬇ Download .txt</button>
+      </div>
+      <p class="copy-hint" id="copyHint" hidden>Copied to clipboard.</p>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">Entropy</span><span class="stat-v" id="entropy">–</span></div>
+        <div class="stat"><span class="stat-k">Combinations</span><span class="stat-v" id="combos">–</span></div>
+        <div class="stat"><span class="stat-k">Average guesses</span><span class="stat-v" id="avgGuesses">–</span></div>
+        <div class="stat"><span class="stat-k">Chance in 10 tries</span><span class="stat-v" id="lockoutChance">–</span></div>
+      </div>
+    </div>
+
+    <p class="model-note"><strong>Online model, not offline.</strong> Backup codes are checked by the server, one at a time, so there is no hash to crack offline — the number that matters is the chance of guessing one code in 10 tries before the account locks. That is why even the 8-digit format is fine against guessing, and why the list itself is the thing to protect.</p>
+  </section>
+
+  <section class="method" aria-label="How the estimate works">
+    <h2>How this estimate works</h2>
+    <p>Entropy = log₂(combinations). Combinations = pool<sup>length</sup>, where the pool is 10 for
+    digits, 62 for letters + digits, and 16 for hex. "Chance in 10 tries" = 10 ÷ combinations —
+    the same lockout model used across PasswordLab.</p>
+    <h3>Quick reference (per code)</h3>
+    <ul>
+      <li><strong>8 digits</strong> — 26.6 bits, 100,000,000 combinations. Guessing chance in 10 tries: 0.00001% (1.0e-5%). The format most services use — safe only because the server locks after a few wrong tries.</li>
+      <li><strong>8 letters + digits</strong> — 47.6 bits, 2.2 × 10<sup>14</sup> combinations. Guessing chance in 10 tries: 4.6e-12%. Over two million times the space of 8 digits, for the same typing effort.</li>
+      <li><strong>16 hex</strong> — 64.0 bits, 1.8 × 10<sup>19</sup> combinations. Guessing chance in 10 tries: 5.4e-17%. The margin format — choose it when a service accepts longer codes.</li>
+    </ul>
+    <p class="honest">A backup code is a spare key, not a password: it is single-use, server-checked, and
+    worthless once the set is revoked. If you lose the list, generate a new set in the service's
+    security settings — the old codes stop working the moment the new set is issued. And if you
+    still use SMS codes, note that a backup code printed on paper cannot be SIM-swapped; see
+    the <a href="/totp-generator">TOTP Authenticator</a> for the everyday second factor that
+    pairs with these codes.</p>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>What are backup codes?</summary>
+      <p>Backup codes are single-use recovery codes a service gives you when you turn on two-factor
+      authentication. Each code works once, as a spare key for the day you lose your phone or your
+      authenticator app. Once a code is used it is burned and can never work again.</p>
+    </details>
+    <details>
+      <summary>Is an 8-digit backup code secure?</summary>
+      <p>Against online guessing, yes: an 8-digit code has 100,000,000 combinations (26.6 bits), so
+      an attacker who gets 10 tries before lockout has only a 0.00001% chance. The real risk is
+      not guessing — it is the list leaking. Every code on a leaked list works, so a stolen list
+      is a full compromise until you revoke and regenerate it.</p>
+    </details>
+    <details>
+      <summary>How should I store backup codes?</summary>
+      <p>Offline and separate from your password: printed on paper in a safe place, or in your
+      password manager. Never in a plain text file on your desktop, never as a screenshot in your
+      photo roll, and never sent to yourself by email or chat — those are exactly the places that
+      get copied in a breach.</p>
+    </details>
+    <details>
+      <summary>What happens when I run out of codes?</summary>
+      <p>Generate a fresh set in your account's security settings. The new set replaces the old
+      one — any unused codes from the old set stop working, so print or save the new list before
+      you close the page.</p>
+    </details>
+    <details>
+      <summary>How random are the generated codes?</summary>
+      <p>Each character comes from <code>crypto.getRandomValues</code> with rejection sampling (no
+      modulo bias), entirely on your device. There is no server, no analytics, no network request.</p>
+    </details>
+    <details>
+      <summary>Does this site see my backup codes?</summary>
+      <p>No. Generation and all math happen inside this page. Refreshing destroys the codes, so
+      save or download them before you leave — this page cannot recover them for you, and neither
+      can anyone else.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-links"><a href="/">Password Strength Checker</a> · <a href="/passphrase-generator">Passphrase Generator</a> · <a href="/password-generator">Password Generator</a> · <a href="/pin-generator">PIN Generator</a> · <a href="/token-generator">Token Generator</a> · <a href="/password-length">Length Calculator</a> · <a href="/pronounceable-password">Pronounceable Password</a> · <a href="/totp-generator">TOTP Authenticator</a> · <a href="/hash-generator">Hash Generator</a></p>
+    <p>PasswordLab — free password tools. Estimates only; nothing is ever transmitted anywhere.</p>
+  </div>
+</footer>
+
+<script src="../backup.js"></script>
+</body>
+</html>
