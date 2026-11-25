@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Password Breach Checker — Has My Password Been Leaked? | PasswordLab</title>
+<meta name="description" content="Check if your password appears in known data breaches using Have I Been Pwned's k-anonymity API. Only the first 5 characters of its SHA-1 hash leave your device — your password never does.">
+<meta name="keywords" content="password breach checker, have i been pwned password check, leaked password checker, pwned password, data breach password check, k-anonymity">
+<meta property="og:title" content="Password Breach Checker — Has My Password Been Leaked?">
+<meta property="og:description" content="Check your password against the Have I Been Pwned breach database. Only the first 5 characters of its SHA-1 hash leave your device — the password itself never does.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://password.mimito6.uk/breach-checker">
+<link rel="canonical" href="https://password.mimito6.uk/breach-checker">
+<link rel="stylesheet" href="../styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PasswordLab Breach Checker",
+  "url": "https://password.mimito6.uk/breach-checker",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Checks whether a password appears in the Have I Been Pwned breach corpus using k-anonymity: only the first 5 characters of the password's SHA-1 hash are sent, the password itself never leaves the device."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Does this site send my password anywhere?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. Your password is hashed with SHA-1 inside your browser, and only the first 5 characters of that hash are sent to the Have I Been Pwned database. The server returns every hash sharing those 5 characters (typically around 2,000 entries), and the match against the remaining 35 characters happens on your device. The server cannot tell which of those ~2,000 candidates was yours."}},
+    {"@type": "Question", "name": "What does \"seen N times\" mean?",
+     "acceptedAnswer": {"@type": "Answer", "text": "It is the number of times that exact password appeared in the breach data Have I Been Pwned has collected. It counts occurrences across breach corpora, not individual accounts — the same password in five breaches counts five times, and one person reusing it in five places still counts as the same password."}},
+    {"@type": "Question", "name": "My password was not found — is it safe?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Not necessarily. \"Not found\" only means the password is absent from the breach corpus Have I Been Pwned knows about. A short or predictable password can be absent from every breach and still be guessed in seconds. Run it through the Strength Checker as well — absence from breaches and resistance to guessing are two different properties."}},
+    {"@type": "Question", "name": "Why SHA-1? Isn't SHA-1 broken?",
+     "acceptedAnswer": {"@type": "Answer", "text": "SHA-1 is used here only because the Have I Been Pwned protocol defines it as the lookup key — it is a bucket index, not password storage. Its broken collision resistance does not matter for this job: nobody is trusting the hash to prove anything, and the hash is never stored or used to verify your password. Password storage is a different problem and needs a slow, salted function such as bcrypt or Argon2."}},
+    {"@type": "Question", "name": "What should I do if my password was found in a breach?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Change it immediately, everywhere you use it — not just on the site that was breached. Attackers try leaked passwords on other sites (credential stuffing), so a reused password is compromised everywhere at once. Generate a fresh one with the Password Generator or a passphrase with the Passphrase Generator, store it in a password manager, and turn on two-factor authentication where it is offered."}},
+    {"@type": "Question", "name": "What if the check fails or I am offline?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Then no result is shown at all. A failed check is never presented as a clean bill of health — the page says plainly that the breach database could not be reached and asks you to try again later. The hashing still happens locally, but without the database there is nothing honest to report."}}
+  ]
+}
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand"><a href="/" class="brand-link">PasswordLab</a></div>
+    <p class="tagline">How long would your password take to crack?</p>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/">Strength Checker</a>
+      <a href="/passphrase-generator">Passphrase Generator</a>
+      <a href="/password-generator">Password Generator</a>
+      <a href="/pin-generator">PIN Generator</a>
+      <a href="/token-generator">Token Generator</a>
+      <a href="/password-length">Length Calculator</a>
+      <a href="/pronounceable-password">Pronounceable Password</a>
+      <a href="/totp-generator">TOTP Authenticator</a>
+      <a href="/hash-generator">Hash Generator</a>
+      <a href="/backup-codes">Backup Codes</a>
+      <a href="/breach-checker" aria-current="page">Breach Checker</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Password Breach Checker</h1>
+
+  <section class="tool" aria-label="Password breach checker">
+    <div class="opt-row">
+      <label for="breachInput" class="pw-label">Password to check</label>
+      <div class="pw-row">
+        <input type="password" id="breachInput" class="text-input" placeholder="Type the password you want to check" aria-label="Password to check" autocomplete="off">
+        <button id="toggleShowBtn" type="button" class="copy-btn">👁 Show</button>
+      </div>
+      <p class="copy-hint">Press Enter or Check. The password is hashed in your browser — it is never sent anywhere.</p>
+    </div>
+    <div class="btn-row">
+      <button id="checkBtn" type="button" class="copy-btn">Check</button>
+    </div>
+
+    <p class="privacy">🔒 Only the first 5 characters of your password's SHA-1 hash leave your device (k-anonymity — see how it works below). Your password and its full hash never leave your browser.</p>
+
+    <p class="warn note">⚠️ A password found in breaches must be changed everywhere it is used, not just on the breached site — attackers try leaked passwords on other sites too (credential stuffing).</p>
+
+    <p class="error-box" id="breachError" hidden></p>
+
+    <div class="result" id="breachVerdictWrap">
+      <div class="verdict fair" id="breachVerdict" hidden>Type a password above, then press Check.</div>
+    </div>
+
+    <div class="result" id="breachResult" hidden>
+      <div class="bignum" id="breachCount">–</div>
+      <p class="bignum-sub" id="breachCountSub">times seen in breaches.</p>
+      <div class="stats">
+        <div class="stat"><span class="stat-k">SHA-1 hash (computed locally)</span><span class="stat-v" id="breachHash" style="word-break: break-all; font-size: 0.85rem;">–</span></div>
+        <div class="stat"><span class="stat-k">Prefix sent to the database</span><span class="stat-v" id="breachPrefix">–</span></div>
+        <div class="stat"><span class="stat-k">Suffix matched locally</span><span class="stat-v" id="breachSuffix" style="word-break: break-all; font-size: 0.85rem;">–</span></div>
+      </div>
+    </div>
+
+    <p class="model-note"><strong>Model.</strong> Have I Been Pwned (HIBP) collects passwords exposed in real data breaches and indexes them by SHA-1 hash. This tool asks the HIBP Pwned Passwords API for the hash range matching your password's 5-character prefix, then checks the remaining 35 characters locally. The count is how many times that exact password appeared in breach corpora — not a count of accounts, and not a strength score.</p>
+  </section>
+
+  <section class="method" aria-label="How k-anonymity protects your password">
+    <h2>How k-anonymity protects your password</h2>
+    <ol>
+      <li><strong>Hash locally.</strong> Your password is hashed with SHA-1 inside your browser. For example, <code>password</code> hashes to <code>5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8</code> — you can verify this on the Hash Generator page (SHA-1 is the HIBP protocol's index; see the FAQ on why its broken collision resistance does not matter here).</li>
+      <li><strong>Send only 5 characters.</strong> Only the first 5 hex characters — <code>5BAA6</code> — are sent to <code>api.pwnedpasswords.com/range/5BAA6</code>. Five hex characters are 20 bits, so there are 1,048,576 possible prefixes, and the server cannot know which password in that bucket is yours.</li>
+      <li><strong>Get the whole bucket back.</strong> The server returns every hash suffix sharing that prefix — typically around two thousand entries (measured 1,977 for prefix <code>5BAA6</code> and 2,509 for <code>00000</code> on 25 November 2026). Responses are padded to a uniform size (<code>Add-Padding: true</code>), so even the response length leaks nothing.</li>
+      <li><strong>Match locally.</strong> Your browser checks whether the remaining 35 characters (<code>1E4C9B93F3F0682250B6CF8331B7EE68FD8</code> for <code>password</code>) appear in that list. The full hash is never transmitted, and the server never learns the result.</li>
+    </ol>
+    <h3>How bad are the usual suspects? (live counts, 25 November 2026)</h3>
+    <ul>
+      <li><strong><code>123456</code></strong> — seen <strong>210,463,629</strong> times. The most leaked password in the corpus.</li>
+      <li><strong><code>password</code></strong> — seen <strong>52,373,976</strong> times.</li>
+      <li><strong><code>qwerty</code></strong> — seen <strong>30,813,001</strong> times.</li>
+    </ul>
+    <p>These are not estimates: they are the counts the HIBP API returned on the date above, and they grow as new breaches are added. Any password on this kind of list is not a password at all — it is a public string attackers try before they even start guessing.</p>
+    <p class="honest">A "not found" result is good news with a limit: it only means the password is absent from the breaches HIBP knows about. It says nothing about guessability — a short random-looking password such as <code>xK9!q</code> may be absent from every breach and still fall to a fast offline attack in seconds. Pair this check with the Strength Checker: breach absence and cracking resistance are two different properties, and a password needs both.</p>
+  </section>
+
+  <section class="faq" aria-label="Frequently asked questions">
+    <h2>FAQ</h2>
+    <details>
+      <summary>Does this site send my password anywhere?</summary>
+      <p>No. Your password is hashed with SHA-1 inside your browser, and only the first 5 characters of that hash are sent to the Have I Been Pwned database. The server returns every hash sharing those 5 characters (typically around 2,000 entries), and the match against the remaining 35 characters happens on your device. The server cannot tell which of those ~2,000 candidates was yours.</p>
+    </details>
+    <details>
+      <summary>What does "seen N times" mean?</summary>
+      <p>It is the number of times that exact password appeared in the breach data Have I Been Pwned has collected. It counts occurrences across breach corpora, not individual accounts — the same password in five breaches counts five times, and one person reusing it in five places still counts as the same password.</p>
+    </details>
+    <details>
+      <summary>My password was not found — is it safe?</summary>
+      <p>Not necessarily. "Not found" only means the password is absent from the breach corpus Have I Been Pwned knows about. A short or predictable password can be absent from every breach and still be guessed in seconds. Run it through the Strength Checker as well — absence from breaches and resistance to guessing are two different properties.</p>
+    </details>
+    <details>
+      <summary>Why SHA-1? Isn't SHA-1 broken?</summary>
+      <p>SHA-1 is used here only because the Have I Been Pwned protocol defines it as the lookup key — it is a bucket index, not password storage. Its broken collision resistance does not matter for this job: nobody is trusting the hash to prove anything, and the hash is never stored or used to verify your password. Password storage is a different problem and needs a slow, salted function such as bcrypt or Argon2.</p>
+    </details>
+    <details>
+      <summary>What should I do if my password was found in a breach?</summary>
+      <p>Change it immediately, everywhere you use it — not just on the site that was breached. Attackers try leaked passwords on other sites (credential stuffing), so a reused password is compromised everywhere at once. Generate a fresh one with the Password Generator or a passphrase with the Passphrase Generator, store it in a password manager, and turn on two-factor authentication where it is offered.</p>
+    </details>
+    <details>
+      <summary>What if the check fails or I am offline?</summary>
+      <p>Then no result is shown at all. A failed check is never presented as a clean bill of health — the page says plainly that the breach database could not be reached and asks you to try again later. The hashing still happens locally, but without the database there is nothing honest to report.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="footer-links"><a href="/">Password Strength Checker</a> · <a href="/passphrase-generator">Passphrase Generator</a> · <a href="/password-generator">Password Generator</a> · <a href="/pin-generator">PIN Generator</a> · <a href="/token-generator">Token Generator</a> · <a href="/password-length">Length Calculator</a> · <a href="/pronounceable-password">Pronounceable Password</a> · <a href="/totp-generator">TOTP Authenticator</a> · <a href="/hash-generator">Hash Generator</a> · <a href="/backup-codes">Backup Codes</a></p>
+    <p>PasswordLab — free password tools. Only the first 5 characters of your password's SHA-1 hash ever leave your device — the password itself never does.</p>
+  </div>
+</footer>
+
+<script src="../breach.js"></script>
+</body>
+</html>
